@@ -6,12 +6,15 @@ Connect-SPOService -Url $TenantSiteURL
 $SiteCollections = Get-SPOSite -Limit "3"
 
 $UserData = @()
-$updated_items_list = @()
+$users_list = @()
 $groups_list = @()
+$ExternalUsers = @()
+
+Write-Host "Number of sites in tenant:"$SiteCollections.count -ForegroundColor Blue
 
 forEach($Site in $SiteCollections)
 {
-    Write-Host "Checking:"$Site.URL
+    Write-Host "Checking:"$Site.URL -ForegroundColor Yellow
     $Users = Get-SPOUser -Site $Site 
     
     forEach($item in $Users){
@@ -30,16 +33,24 @@ forEach($Site in $SiteCollections)
         $groups_list += $groups_title + ":" + $groups_users + ":" + $groups_roles
     }
 
+    $ExtUsers = Get-SPOUser -Limit All -Site $Site.URL | Where { $_.LoginName -like "*#ext#*" -or $_.LoginName -like "*urn:spo:guest*" }
+    If ($ExtUsers.count -gt 0) {
+        $ExternalUsers += $ExtUsers
+    }else {
+        $ExternalUsers += 'No external users present'
+    }
+
     $UserData += New-Object PSObject -Property  @{
         'Site URL' = $Site.URL
         'Users_DisplayName' = ($Users.DisplayName | Out-String).Trim()
         'Users_LoginName' =  ($Users.LoginName | Out-String).Trim()
-        'Users' = ($updated_items_list | Out-String).Trim()
+        'Users' = ($users_list | Out-String).Trim()
         'User_Groups' = ($groups_list | Out-String).Trim()
+        'External_users' = ($ExternalUsers | Out-String).Trim()
     }
 
 }
 
-$UserData | Select-Object "Site URL", "Users_DisplayName", "Users_LoginName", "Users", "User_Groups" | Export-CSV $CSVFilePath -NoTypeInformation
+$UserData | Select-Object "Site URL", "Users_DisplayName", "Users_LoginName", "Users", "User_Groups", 'External_users' | Export-CSV $CSVFilePath -NoTypeInformation
 
 Write-Host "Done"
