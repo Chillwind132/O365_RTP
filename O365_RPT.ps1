@@ -1,4 +1,3 @@
-#Config Variables
 $TenantSiteURL =  "https://pwceur-admin.sharepoint.com"
 $CSVFilePath = ".\data.csv"
 
@@ -8,33 +7,39 @@ $SiteCollections = Get-SPOSite -Limit "3"
 
 $UserData = @()
 $updated_items_list = @()
+$groups_list = @()
+
 forEach($Site in $SiteCollections)
 {
     Write-Host "Checking:"$Site.URL
     $Users = Get-SPOUser -Site $Site 
     
     forEach($item in $Users){
-        $updated_item_d = $item | Select -ExpandProperty "DisplayName"
-        $updated_item_l = $item | Select -ExpandProperty "LoginName"
-        $updated_item = $updated_item_d + ":" + $updated_item_l
-        $updated_items_list += $updated_item
-
+        $users_d = $item | Select -ExpandProperty "DisplayName"
+        $users_l = $item | Select -ExpandProperty "LoginName"
+        $users_list += $users_d + ":" + $users_l
     }   
-      
+    
+    $Groups = Get-SPOSiteGroup -Site $Site.URL 
+    
+    forEach($item in $Groups){
+        $groups_title = $item.Title
+        $groups_users = $item | Select -ExpandProperty "Users"
+        $groups_roles = $item | Select -ExpandProperty "Roles"
+
+        $groups_list += $groups_title + ":" + $groups_users + ":" + $groups_roles
+    }
+
     $UserData += New-Object PSObject -Property  @{
         'Site URL' = $Site.URL
         'Users_DisplayName' = ($Users.DisplayName | Out-String).Trim()
         'Users_LoginName' =  ($Users.LoginName | Out-String).Trim()
         'Users' = ($updated_items_list | Out-String).Trim()
+        'User_Groups' = ($groups_list | Out-String).Trim()
     }
-    
-    Write-Host $updated_item
-    Write-Host $updated_items_list
 
-    Write-Host $Users.count
-    Write-Host "Done"
 }
 
-$UserData | Select-Object "Site URL", "Users_DisplayName", "Users_LoginName", "Users" | Export-CSV $CSVFilePath -NoTypeInformation
+$UserData | Select-Object "Site URL", "Users_DisplayName", "Users_LoginName", "Users", "User_Groups" | Export-CSV $CSVFilePath -NoTypeInformation
 
 Write-Host "Done"
