@@ -1,22 +1,52 @@
 $CSVFilePath =  ".\data.csv"
 
 function user_input {
-    $user_selection_report = Read-Host "Would you like to generate user & groups report or user permissions report? Select 1 for user/groups report; Select 2 for permissions report"
-    while (($user_selection_report -ne '1') -and ($user_selection_report -ne '2')) {
-        Write-Host "Invalid input"
-        $user_selection_report = Read-Host "Would you like to generate user & groups report or user permissions report? Select 1 for user/groups report; Select 2 for permissions report"
-    }
-    $user_selection_level = Read-Host "Select 1 for tenant level report; Select 2 for individual site col report"
-    while (($user_selection_level -ne '1') -and ($user_selection_level -ne '2')) {
-        Write-Host "Invalid input"
-        $user_selection_level = Read-Host "Select 1 for tenant level report; Select 2 for individual site col report"
-    }
-    $user_selection_array = @()
-    $user_selection_array += $user_selection_report
-    $user_selection_array += $user_selection_level
 
+    $user_selection_array = @()
+
+    $user_selection_report = Read-Host "1 - user/groups report; 2 - permissions report; 3 - lock/unlock site"
+    while (($user_selection_report -ne '1') -and ($user_selection_report -ne '2') -and ($user_selection_report -ne '3')) {
+        Write-Host "Invalid input"
+        $user_selection_report = Read-Host "1 - user/groups report; 2 - permissions report; 3 - lock/unlock site"
+    }
+    $user_selection_array += $user_selection_report
+    
+    if (($user_selection_report -eq '1') -or ($user_selection_report -eq '2')) {
+        $user_selection_level = Read-Host "Select 1 for tenant level report; Select 2 for individual site col report"
+        while (($user_selection_level -ne '1') -and ($user_selection_level -ne '2')) {
+            Write-Host "Invalid input"
+            $user_selection_level = Read-Host "Select 1 for tenant level report; Select 2 for individual site col report"
+        }
+        $user_selection_array += $user_selection_level
+    }
+    ElseIf ($user_selection_report -eq '3') {
+        $user_selection_level = Read-Host "1 - lock; 2 - unlock"
+        while (($user_selection_level -ne '1') -and ($user_selection_level -ne '2')) {
+            Write-Host "Invalid input"
+            $user_selection_level = Read-Host "1 - lock; 2 - unlock"
+        }
+        $user_selection_array += $user_selection_level
+    }    
+    
     return $user_selection_array
 }
+
+function lock_site {
+    $user_selection_site = Read-Host "Input target Site URL to lock"
+    $user_selection_admin = Read-Host "Input associated Admin center URL"
+    Write-Host "Locking:"$user_selection_site -ForegroundColor Yellow
+    Connect-SPOService -Url $user_selection_admin
+    Set-SPOSite -Identity $user_selection_site -LockState "NoAccess"
+}
+
+function unlock_site {
+    $user_selection_site = Read-Host "Input target Site URL to unlock"
+    $user_selection_admin = Read-Host "Input associated Admin center URL"
+    Write-Host "Unlocking:"$user_selection_site -ForegroundColor Yellow
+    Connect-SPOService -Url $user_selection_admin
+    Set-SPOSite -Identity $user_selection_site -LockState "Unlock"
+}
+
 
 function generate_users_report_sitecol ($SiteURL) {
 
@@ -342,7 +372,13 @@ if (($user_selection_array[0] -eq 1) -and ($user_selection_array[1] -eq 1)) { #u
     Write-Host "You selected to generate user & groups report for a site col" -ForegroundColor Yellow
     $user_input = Read-Host "Input the target SharePoint Online Site URL"
     generate_users_report_sitecol($user_input)
-} 
+} ElseIf (($user_selection_array[0] -eq 3) -and ($user_selection_array[1] -eq 1)) {
+    Write-Host "You selected to Lock a site col" -ForegroundColor Red
+    lock_site
+} ElseIf (($user_selection_array[0] -eq 3) -and ($user_selection_array[1] -eq 2)) {
+    Write-Host "You selected to Unlock a site col" -ForegroundColor Green
+    unlock_site
+}
 
 
 
